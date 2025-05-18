@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <title>בריחה מהדרקון</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      direction: rtl;
+      font-family: Arial, sans-serif;
+    }
+
+    .container {
+      width: 100vw;
+      height: 100vh;
+      background: url('https://github.com/user-attachments/assets/7286d37d-1f0e-47a9-a1b9-7c8ff97bf178') no-repeat center center/cover;
+      position: relative;
+    }
+
+    #hawk1, #dragon {
+      width: 150px;
+      height: 150px;
+      position: absolute;
+      transition: top 0.3s ease, left 0.3s ease;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 18px;
+      background-color: rgb(0, 0, 0);
+      color: rgb(0, 229, 255);
+      border: none; 
+      border-radius: 5px;
+      position: absolute;
+    }
+
+    #timerButton {
+      top: 20px;
+      left: 20px;
+    }
+
+    #barrier {
+      width: 10px;
+      height: 100vh;
+      background-color: rgb(0, 0, 0);
+      position: absolute;
+      left: 50%;
+      top: 0;
+      transform: translateX(-50%);
+      display: none;
+      z-index: 5;
+    }
+
+    #powerUp {
+      width: 40px;
+      height: 40px;
+      position: absolute;
+      border-radius: 50%;
+      z-index: 10;
+      background-image: url('https://p7.hiclipart.com/preview/247/569/212/diamond-color-gemstone-clip-art-dimond.jpg');
+      background-size: cover;
+      background-position: center;
+    }
+
+    #gameMessage {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 48px;
+      background-color: rgb(0, 0, 0);
+      color: rgb(0, 229, 255);
+      padding: 20px 40px;
+      border-radius: 10px;
+      display: none;
+      z-index: 1000;
+      text-align: center;
+    }
+
+    #restartButton {
+      position: fixed;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 15px 30px;
+      font-size: 24px;
+      background-color: #000000;
+      color: rgb(0, 229, 255);
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      display: none;
+      z-index: 1001;
+    }
+
+    #countdown {
+      position: fixed;
+      top: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 64px;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: rgb(0, 229, 255);
+      padding: 20px 40px;
+      border-radius: 10px;
+      z-index: 1002;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img id="hawk1" src="hawk.png" alt="נץ" />
+    <img id="dragon" src="dragon.png" alt="דרקון" />
+    <div id="barrier"></div>
+    <button id="timerButton">⏱ זמן שנותר: 30</button>
+    <div id="powerUp" style="display: none;"></div>
+  </div>
+
+  <div id="countdown">3</div>
+  <div id="gameMessage"></div>
+  <button id="restartButton" onclick="location.reload()">🔁 הקש כדי להתחיל מחדש</button>
+
+  <script>
+    let isKeyPressed = false;
+    let isDragonKeyPressed = false;
+    let gameTime = 30;
+    let hawkSpeed = 52;
+    let dragonSpeed = 30;
+    const defaultHawkSpeed = 52;
+    const defaultDragonSpeed = 30;
+    const hawk = document.getElementById("hawk1");
+    const dragon = document.getElementById("dragon");
+    const timerButton = document.getElementById("timerButton");
+    const powerUp = document.getElementById("powerUp");
+    const barrier = document.getElementById("barrier");
+    const gameMessage = document.getElementById("gameMessage");
+    const restartButton = document.getElementById("restartButton");
+    const countdownEl = document.getElementById("countdown");
+
+    let gameStarted = false;
+    hawk.style.transform = "scaleX(-1)";
+    hawk.style.left = "100px";
+    hawk.style.top = "300px";
+    dragon.style.left = "1000px";
+    dragon.style.top = "300px";
+
+    let barrierActive = false;
+
+    function isBlockedByBarrier(elem, newX, newY) {
+      if (!barrierActive) return false;
+      const elemRect = {
+        left: newX,
+        right: newX + elem.offsetWidth,
+        top: newY,
+        bottom: newY + elem.offsetHeight,
+      };
+      const barrierRect = barrier.getBoundingClientRect();
+      return !(
+        elemRect.right < barrierRect.left ||
+        elemRect.left > barrierRect.right ||
+        elemRect.bottom < barrierRect.top ||
+        elemRect.top > barrierRect.bottom
+      );
+    }
+
+    function moveHawkByKey(key) {
+      if (!gameStarted) return;
+      let currentX = parseFloat(hawk.style.left);
+      let currentY = parseFloat(hawk.style.top);
+      if (key.toLowerCase() === "d") hawk.style.transform = "scaleX(-1)";
+      if (key.toLowerCase() === "a") hawk.style.transform = "scaleX(1)";
+      
+
+      switch (key.toLowerCase()) {
+        case "w":
+          currentY -= hawkSpeed;
+          break;
+        case "s":
+          currentY += hawkSpeed;
+          break;
+        case "a":
+          currentX -= hawkSpeed;
+          break;
+        case "d":
+          currentX += hawkSpeed;
+          break;
+      }
+
+      if (isBlockedByBarrier(hawk, currentX, currentY)) return;
+
+      const maxWidth = window.innerWidth - hawk.offsetWidth;
+      const maxHeight = window.innerHeight - hawk.offsetHeight;
+      currentX = Math.max(0, Math.min(maxWidth, currentX));
+      currentY = Math.max(0, Math.min(maxHeight, currentY));
+
+      hawk.style.left = currentX + "px";
+      hawk.style.top = currentY + "px";
+    }
+
+    function moveDragonByArrow(key) {
+      if (!gameStarted) return;
+      let currentX = parseFloat(dragon.style.left);
+      let currentY = parseFloat(dragon.style.top);
+      if (key === "ArrowRight") dragon.style.transform = "scaleX(-1)";
+      if (key === "ArrowLeft") dragon.style.transform = "scaleX(1)";
+      
+      switch (key) {
+        case "ArrowUp":
+          currentY -= dragonSpeed;
+          break;
+        case "ArrowDown":
+          currentY += dragonSpeed;
+          break;
+        case "ArrowLeft":
+          currentX -= dragonSpeed;
+          break;
+        case "ArrowRight":
+          currentX += dragonSpeed;
+          break;
+      }
+
+      if (isBlockedByBarrier(dragon, currentX, currentY)) return;
+
+      const maxWidth = window.innerWidth - dragon.offsetWidth;
+      const maxHeight = window.innerHeight - dragon.offsetHeight;
+      currentX = Math.max(0, Math.min(maxWidth, currentX));
+      currentY = Math.max(0, Math.min(maxHeight, currentY));
+
+      dragon.style.left = currentX + "px";
+      dragon.style.top = currentY + "px";
+
+      if (checkCollision(hawk, dragon)) {
+        endGame("הדרקון תפס אותך! 😱");
+      }
+    }
+
+    function checkCollision(elem1, elem2) {
+      const rect1 = elem1.getBoundingClientRect();
+      const rect2 = elem2.getBoundingClientRect();
+      return !(
+        rect1.right < rect2.left ||
+        rect1.left > rect2.right ||
+        rect1.bottom < rect2.top ||
+        rect1.top > rect2.bottom
+      );
+    }
+
+    function showGameMessage(message) {
+      gameMessage.textContent = message;
+      gameMessage.style.display = "block";
+    }
+
+    function showRestartButton() {
+      restartButton.style.display = "block";
+    }
+
+    function endGame(message) {
+      gameStarted = false;  // עוצר את המשחק
+      showGameMessage(message);
+      showRestartButton();
+    }
+
+    document.addEventListener("keydown", function (event) {
+      const key = event.key;
+      if (["w", "a", "s", "d", "W", "A", "S", "D"].includes(key) && !isKeyPressed) {
+        isKeyPressed = true;
+        moveHawkByKey(key);
+      }
+      if (
+        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(key) &&
+        !isDragonKeyPressed
+      ) {
+        isDragonKeyPressed = true;
+        moveDragonByArrow(key);
+      }
+      //-1
+    });
+
+    document.addEventListener("keyup", function (event) {
+      const key = event.key;
+      if (["w", "a", "s", "d", "W", "A", "S", "D"].includes(key)) isKeyPressed = false;
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(key)) isDragonKeyPressed = false;
+    });
+
+    function startGame() {
+      gameStarted = true;
+      countdownEl.style.display = "none";
+
+      setTimeout(() => {
+        hawkSpeed += 5;
+      }, 10000);
+      setTimeout(() => {
+        dragonSpeed += 5;
+        setTimeout(() => {
+          dragonSpeed -= 5;
+        }, 5000);
+      }, 10000);
+      setTimeout(() => {
+        dragonSpeed += 5;
+        setTimeout(() => {
+          dragonSpeed -= 5;
+          endGame("נגמר הזמן הצלחת לברוח! ⏰✨");
+        }, 5000);
+      }, 25000);
+
+      const gameInterval = setInterval(() => {
+        if (!gameStarted) {
+          clearInterval(gameInterval);
+          return;
+        }
+        gameTime--;
+        timerButton.textContent = "⏱ זמן שנותר: " + gameTime;
+        if (gameTime <= 0) {
+          clearInterval(gameInterval);
+          endGame("נגמר הזמן הצלחת לברוח! ⏰✨");
+        }
+      }, 1000);
+
+      const barrierInterval = setInterval(() => {
+        if (!gameStarted) {
+          clearInterval(barrierInterval);
+          return;
+        }
+        barrier.style.display = "block";
+        barrierActive = true;
+        setTimeout(() => {
+          barrier.style.display = "none";
+          barrierActive = false;
+        }, 3000);
+      }, 10000);
+
+      const powerUpInterval = setInterval(() => {
+        if (!gameStarted) {
+          clearInterval(powerUpInterval);
+          return;
+        }
+        spawnPowerUp();
+      }, 8000);
+    }
+
+    function spawnPowerUp() {
+      const types = ["boost", "slow", "freeze"];
+      const randomType = types[Math.floor(Math.random() * types.length)];
+      const x = Math.random() * (window.innerWidth - 50);
+      const y = Math.random() * (window.innerHeight - 50);
+      powerUp.style.left = x + "px";
+      powerUp.style.top = y + "px";
+      powerUp.className = randomType;
+      powerUp.style.display = "block";
+
+      const checkInterval = setInterval(() => {
+        if (!gameStarted) {
+          clearInterval(checkInterval);
+          powerUp.style.display = "none";
+          return;
+        }
+        if (checkCollision(hawk, powerUp)) {
+          applyEffect(randomType, "hawk");
+          clearPowerUp(checkInterval);
+        } else if (checkCollision(dragon, powerUp)) {
+          applyEffect(randomType, "dragon");
+          clearPowerUp(checkInterval);
+        }
+      }, 100);
+
+      setTimeout(() => clearPowerUp(checkInterval), 5000);
+    }
+
+    function clearPowerUp(interval) {
+      clearInterval(interval);
+      powerUp.style.display = "none";
+    }
+
+    function applyEffect(type, target) {
+      if (type === "boost") {
+        if (target === "hawk") hawkSpeed += 20;
+        else dragonSpeed += 20;
+        setTimeout(() => {
+          if (target === "hawk") hawkSpeed = defaultHawkSpeed;
+          else dragonSpeed = defaultDragonSpeed;
+        }, 3000);
+      } else if (type === "slow") {
+        if (target === "hawk") hawkSpeed = Math.max(10, hawkSpeed - 20);
+        else dragonSpeed = Math.max(10, dragonSpeed - 20);
+        setTimeout(() => {
+          if (target === "hawk") hawkSpeed = defaultHawkSpeed;
+          else dragonSpeed = defaultDragonSpeed;
+        }, 3000);
+      } else if (type === "freeze") {
+        if (target === "hawk") hawkSpeed = 0;
+        else dragonSpeed = 0;
+        setTimeout(() => {
+          if (target === "hawk") hawkSpeed = defaultHawkSpeed;
+          else dragonSpeed = defaultDragonSpeed;
+        }, 1000);
+      }
+    }
+
+    // ספירה לאחור לפני התחלה
+    let countdown = 3;
+    countdownEl.textContent = countdown;
+    const countdownInterval = setInterval(() => {
+      countdown--;
+      if (countdown > 0) {
+        countdownEl.textContent = countdown;
+      } else {
+        countdownEl.textContent = "התחל!";
+        clearInterval(countdownInterval);
+        setTimeout(startGame, 1000);
+      }
+    }, 1000);
+  </script>
+</body>
+</html>
